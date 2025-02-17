@@ -2,26 +2,32 @@ import os
 import sys
 
 import requests
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel
 
 SCREEN_SIZE = [600, 450]
+ll = '61.403754,55.159535'
+spn = '0.002,0.002'
 
 
 class Example(QWidget):
-    def __init__(self):
+    def __init__(self, ll, spn):
         super().__init__()
-        self.getImage()
+        self.getImage(ll, spn)
         self.initUI()
+        self.ll = ll
+        self.spn = spn
 
-    def getImage(self):
+    def getImage(self, ll, spn):
         server_address = 'https://static-maps.yandex.ru/v1?'
         api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
-        ll_spn = 'll=61.403754,55.159535&spn=0.002,0.002'
+        ll_spn = f'll={ll}&spn={spn}'
         # Готовим запрос.
 
         map_request = f"{server_address}{ll_spn}&apikey={api_key}"
         response = requests.get(map_request)
+        print(response)
 
         if not response:
             print("Ошибка выполнения запроса:")
@@ -44,6 +50,31 @@ class Example(QWidget):
         self.image.move(0, 0)
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
+        print('Изменено')
+
+    def keyPressEvent(self, event):
+        scale = float(spn.split(',')[0])
+        x, y = self.ll.split(',')
+        if event.key() == Qt.Key.Key_Right:
+            x = float(x)
+            x += scale / 2
+            x = str(x)
+        elif event.key() == Qt.Key.Key_Left:
+            x = float(x)
+            x -= scale / 2
+            x = str(x)
+        elif event.key() == Qt.Key.Key_Up:
+            y = float(y)
+            y += scale / 2
+            y = str(y)
+        elif event.key() == Qt.Key.Key_Down:
+            y = float(y)
+            y -= scale / 2
+            y = str(y)
+        self.ll = ','.join([x, y])
+        self.getImage(self.ll, self.spn)
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
 
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
@@ -52,6 +83,6 @@ class Example(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = Example()
+    ex = Example(ll, spn)
     ex.show()
     sys.exit(app.exec())
