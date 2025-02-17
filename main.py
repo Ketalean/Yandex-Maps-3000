@@ -4,7 +4,7 @@ import sys
 import requests
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QRadioButton
 
 SCREEN_SIZE = [600, 450]
 ll = '61.403754,55.159535'
@@ -14,6 +14,7 @@ spn = '0.002,0.002'
 class Example(QWidget):
     def __init__(self, ll, spn):
         super().__init__()
+        self.dark = False
         self.getImage(ll, spn)
         self.initUI()
         self.ll = ll
@@ -22,11 +23,12 @@ class Example(QWidget):
 
     def getImage(self, ll, spn):
         server_address = 'https://static-maps.yandex.ru/v1?'
-        api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13'
+        api_key = 'af90eac0-d94c-489a-8b0a-7cc38740ab4b'
         ll_spn = f'll={ll}&spn={spn}'
-        # Готовим запрос.
-
-        map_request = f"{server_address}{ll_spn}&apikey={api_key}"
+        if self.dark:
+            map_request = f"{server_address}{ll_spn}&theme=dark&apikey={api_key}"
+        else:
+            map_request = f"{server_address}{ll_spn}&apikey={api_key}"
         response = requests.get(map_request)
 
         if not response:
@@ -50,6 +52,19 @@ class Example(QWidget):
         self.image.move(0, 0)
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
+        self.radio_button = QRadioButton(self)
+        self.radio_button.setText('Тёмная тема')
+        self.radio_button.move(500, 10)
+        self.radio_button.clicked.connect(self.mousePressEvent)
+
+    def mousePressEvent(self, event):
+        if self.radio_button.isChecked():
+            self.dark = True
+        else:
+            self.dark = False
+        self.getImage(self.ll, self.spn)
+        self.pixmap = QPixmap(self.map_file)
+        self.image.setPixmap(self.pixmap)
 
     def keyPressEvent(self, event):
         scale = float(self.spn.split(',')[0])
@@ -72,7 +87,6 @@ class Example(QWidget):
             y = str(y)
         elif event.key() == Qt.Key.Key_PageDown:
             self.scale += 0.002
-            print(self.scale)
         elif event.key() == Qt.Key.Key_PageUp:
             if self.scale - 0.002 >= 0:
                 self.scale -= 0.002
