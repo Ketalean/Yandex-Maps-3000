@@ -18,6 +18,7 @@ class Example(QWidget):
         self.initUI()
         self.ll = ll
         self.spn = spn
+        self.scale = 0.002
 
     def getImage(self, ll, spn):
         server_address = 'https://static-maps.yandex.ru/v1?'
@@ -27,7 +28,6 @@ class Example(QWidget):
 
         map_request = f"{server_address}{ll_spn}&apikey={api_key}"
         response = requests.get(map_request)
-        print(response)
 
         if not response:
             print("Ошибка выполнения запроса:")
@@ -50,10 +50,9 @@ class Example(QWidget):
         self.image.move(0, 0)
         self.image.resize(600, 450)
         self.image.setPixmap(self.pixmap)
-        print('Изменено')
 
     def keyPressEvent(self, event):
-        scale = float(spn.split(',')[0])
+        scale = float(self.spn.split(',')[0])
         x, y = self.ll.split(',')
         if event.key() == Qt.Key.Key_Right:
             x = float(x)
@@ -71,6 +70,14 @@ class Example(QWidget):
             y = float(y)
             y -= scale / 2
             y = str(y)
+        elif event.key() == Qt.Key.Key_PageDown:
+            self.scale += 0.002
+            print(self.scale)
+        elif event.key() == Qt.Key.Key_PageUp:
+            if self.scale - 0.002 >= 0:
+                self.scale -= 0.002
+                print(self.scale)
+        self.spn = f'{self.scale},{self.scale}'
         self.ll = ','.join([x, y])
         self.getImage(self.ll, self.spn)
         self.pixmap = QPixmap(self.map_file)
