@@ -4,7 +4,7 @@ import sys
 import requests
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QRadioButton
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QRadioButton, QLineEdit, QPushButton
 
 SCREEN_SIZE = [600, 450]
 ll = '61.403754,55.159535'
@@ -21,14 +21,16 @@ class Example(QWidget):
         self.spn = spn
         self.scale = 0.002
 
-    def getImage(self, ll, spn):
+    def getImage(self, ll, spn, metka=False):
         server_address = 'https://static-maps.yandex.ru/v1?'
         api_key = 'af90eac0-d94c-489a-8b0a-7cc38740ab4b'
         ll_spn = f'll={ll}&spn={spn}'
+        map_request = f"{server_address}{ll_spn}"
+        if metka:
+            map_request += f"&pt={ll},pm2rdm"
         if self.dark:
-            map_request = f"{server_address}{ll_spn}&theme=dark&apikey={api_key}"
-        else:
-            map_request = f"{server_address}{ll_spn}&apikey={api_key}"
+            map_request += "&theme=dark"
+        map_request += f"&apikey={api_key}"
         response = requests.get(map_request)
 
         if not response:
@@ -56,6 +58,47 @@ class Example(QWidget):
         self.radio_button.setText('Тёмная тема')
         self.radio_button.move(500, 10)
         self.radio_button.clicked.connect(self.mousePressEvent)
+        self.poisk = QLineEdit(self)
+        self.poisk.move(225, 425)
+        self.btn_poisk = QPushButton(self)
+        self.btn_poisk.move(370, 425)
+        self.btn_poisk.setText('Искать!')
+        self.btn_poisk.clicked.connect(self.search)
+
+    def search(self):
+        try:
+            toponym_to_find = self.poisk.text()
+
+            geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
+
+            geocoder_params = {
+                "apikey": "8013b162-6b42-4997-9691-77b7074026e0",
+                "geocode": toponym_to_find,
+                "format": "json"}
+
+            response = requests.get(geocoder_api_server, params=geocoder_params)
+
+            if not response:
+                # обработка ошибочной ситуации
+                self.poisk.setText('ERROR')
+                return
+
+            # Преобразуем ответ в json-объект
+            json_response = response.json()
+            # Получаем первый топоним из ответа геокодера.
+            toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+            self.ll = ','.join(toponym['Point']['pos'].split(' '))
+            left_corner = toponym['boundedBy']['Envelope']['upperCorner']
+            right_corner = toponym['boundedBy']['Envelope']['lowerCorner']
+            self.scale = min(float(left_corner.split(' ')[0]) - float(right_corner.split(' ')[0]),
+                             float(left_corner.split(' ')[1]) - float(right_corner.split(' ')[1]))
+            self.spn = f"{self.scale},{self.scale}"
+            self.getImage(self.ll, self.spn, metka=True)
+            self.pixmap = QPixmap(self.map_file)
+            self.image.setPixmap(self.pixmap)
+            self.poisk.clearFocus()
+        except Exception:
+            self.poisk.setText('ERROR')
 
     def mousePressEvent(self, event):
         if self.radio_button.isChecked():
@@ -65,15 +108,18 @@ class Example(QWidget):
         self.getImage(self.ll, self.spn)
         self.pixmap = QPixmap(self.map_file)
         self.image.setPixmap(self.pixmap)
+        self.poisk.clearFocus()
 
     def keyPressEvent(self, event):
         scale = float(self.spn.split(',')[0])
         x, y = self.ll.split(',')
         if event.key() == Qt.Key.Key_Right:
+            self.poisk.clearFocus()
             x = float(x)
             x += scale / 2
             x = str(x)
         elif event.key() == Qt.Key.Key_Left:
+            self.poisk.clearFocus()
             x = float(x)
             x -= scale / 2
             x = str(x)
@@ -90,7 +136,6 @@ class Example(QWidget):
         elif event.key() == Qt.Key.Key_PageUp:
             if self.scale - 0.002 >= 0:
                 self.scale -= 0.002
-                print(self.scale)
         self.spn = f'{self.scale},{self.scale}'
         self.ll = ','.join([x, y])
         self.getImage(self.ll, self.spn)
