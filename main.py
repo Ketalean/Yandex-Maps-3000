@@ -15,19 +15,20 @@ class Example(QWidget):
     def __init__(self, ll, spn):
         super().__init__()
         self.dark = False
+        self.metka_ll = None
         self.getImage(ll, spn)
         self.initUI()
         self.ll = ll
         self.spn = spn
         self.scale = 0.002
 
-    def getImage(self, ll, spn, metka=False):
+    def getImage(self, ll, spn):
         server_address = 'https://static-maps.yandex.ru/v1?'
         api_key = 'af90eac0-d94c-489a-8b0a-7cc38740ab4b'
         ll_spn = f'll={ll}&spn={spn}'
         map_request = f"{server_address}{ll_spn}"
-        if metka:
-            map_request += f"&pt={ll},pm2rdm"
+        if self.metka_ll is not None:
+            map_request += f"&pt={self.metka_ll},pm2rdm"
         if self.dark:
             map_request += "&theme=dark"
         map_request += f"&apikey={api_key}"
@@ -93,7 +94,8 @@ class Example(QWidget):
             self.scale = min(float(left_corner.split(' ')[0]) - float(right_corner.split(' ')[0]),
                              float(left_corner.split(' ')[1]) - float(right_corner.split(' ')[1]))
             self.spn = f"{self.scale},{self.scale}"
-            self.getImage(self.ll, self.spn, metka=True)
+            self.metka_ll = self.ll
+            self.getImage(self.ll, self.spn)
             self.pixmap = QPixmap(self.map_file)
             self.image.setPixmap(self.pixmap)
             self.poisk.clearFocus()
